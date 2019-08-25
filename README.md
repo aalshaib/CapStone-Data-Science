@@ -27,21 +27,22 @@ project the program will be able to classify the reviews that given by a custome
 6. It will build up the vocabulary from all the reviews and turns each individual text into a matrix of numbers
 7. then, the SVM classifier and Random Forest Classifier model are created to be trained on 80% of the data.
 8. The classifier model is then checked and run on remaining test data.
+
 # the task approaches are:
-9. Scenario 1 : consider each star rating individually. 
-9. Scenario 2: consider star rating 1 & 2 as negative and 4 & 5 as positive  and 3 as neutral
-10. Scenario 3: consider star rating 1 & 2 as negative and 3 &4 & 5 as positive
-11. Scenario 4: consider star rating 1 & 2 & 3 as negative and 4 & 5 as positive
-12. Scenario 5: consider star rating 1 & 2 as negative and 4 & 5 as positive  and get rid of rating star 3
+1. Scenario 1 : consider each star rating individually. 
+2. Scenario 2: consider star rating 1 & 2 as negative and 4 & 5 as positive  and 3 as neutral
+3. Scenario 3: consider star rating 1 & 2 as negative and 3 &4 & 5 as positive
+4. Scenario 4: consider star rating 1 & 2 & 3 as negative and 4 & 5 as positive
+5. Scenario 5: consider star rating 1 & 2 as negative and 4 & 5 as positive  and get rid of rating star 3
 
 
 
-getting the results of  these five Scenarios  can help us to commit and relay in one approach that can classify reviwes as a positive or negative.
-
-File Descriptions:
+# File Descriptions:
 there are one python notebook and one yelp.csv that has 10000 rows and 2 columns that can be perform on these classification and approaces.
 
 # Results:
+getting the results of  these five Scenarios  can help us to commit and relay in one approach that can classify reviwes as a positive or negative.
+
 Scenario 4: was the best one. it gives me the highest accuracy among all the 5 approaches. it was 88%
 also, SVM performs better than Random Forest classifier in all the approaches.
 
