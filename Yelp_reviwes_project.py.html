@@ -1,0 +1,470 @@
+
+# coding: utf-8
+
+# In[113]:
+
+
+#import the needed libraries
+import pandas as pd
+import numpy as np
+import sys
+import csv
+from datetime import datetime
+from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import RandomForestClassifier
+from collections import Counter
+
+
+# In[114]:
+
+
+#read text column and store it to text
+#read stars column and store it to star
+
+text = pd.read_csv('yelp.csv', usecols=['text'])
+star = pd.read_csv('yelp.csv', usecols=['stars'])
+
+
+# In[115]:
+
+
+# exploring the two columns
+display(pd.concat([text, star], axis = 1))
+
+
+# In[116]:
+
+
+#check if there is any null values to fix them
+
+display(text.isnull().sum(), star.isnull().sum())
+
+
+# In[117]:
+
+
+# need to store the dataset to a list to ease the processing
+texts=[]
+stars=[]
+
+for i in range(len(text)):
+    texts.append(text['text'][i])
+
+for i in range(len(star)):
+    stars.append(star['stars'][i])
+
+
+    
+
+
+# In[118]:
+
+
+#check if the list is empty or not
+display(len(texts))
+
+
+# In[119]:
+
+
+display(len(stars))
+
+
+# In[120]:
+
+
+# in order to avoid any bais in rating reviews system we need to train the dataset in a balanced data
+
+def balance_dataset(x,y):
+    freq = Counter(y)
+    
+    # the least rating will be the max number we need for the other ratings
+    
+    max = freq.most_common()[-1][1]
+    
+    added_num = {count: 0 for count in freq.keys()}
+    
+    new_y=[]
+    new_x=[]
+    
+    for i, yy in enumerate(y):
+        if added_num[yy] < max:
+            new_y.append(yy)
+            new_x.append(x[i])
+            added_num[yy]+=1
+    
+    return new_x, new_y
+
+
+# In[121]:
+
+
+# show the count of each star 
+display(Counter(stars))
+
+
+# In[122]:
+
+
+# as we can see above the dataset are not balanced:
+
+# we have varies number of rating stars. the majority were rated as 4 or 5 stars.
+
+# we need to balance the data, so our model will not be bias.
+
+# the goal is to see what star rating were scoring the least. in our case, 1 has the least number which is 749
+
+# so, we have to unify the number of all the star rating 
+
+
+# In[123]:
+
+
+balanced_x, balanced_y = balance_dataset(texts, stars)
+
+
+# In[124]:
+
+
+# display the count of each star after it has been balanced
+display(Counter(balanced_y))
+
+
+# In[125]:
+
+
+# vectorize the texts by usig n-grams then calculate the TF-IDF
+n=3
+
+vectorizer = TfidfVectorizer(ngram_range=(1, n))
+
+# fit the vectorizer
+
+vectors = vectorizer.fit_transform(balanced_x)
+
+
+# In[126]:
+
+
+display(vectors)
+
+
+# In[174]:
+
+
+#split the dataset for traning
+X_train, X_test, y_train, y_test = train_test_split(vectors, balanced_y, test_size=0.2, random_state=60)
+
+
+# In[175]:
+
+
+# use the RandomForestClassifier classifier
+clf = RandomForestClassifier()
+clf.fit(X_train, y_train)
+
+
+# In[176]:
+
+
+# use the SVM classifier
+
+
+svm_classifier = LinearSVC()
+svm_classifier.fit(X_train, y_train)
+
+
+# In[177]:
+
+
+pred = svm_classifier.predict(X_test)
+pred_clf = clf.predict(X_test)
+
+
+# In[180]:
+
+
+print("condider all the stars rating")
+
+print("")
+
+
+print("Accuracy: SVM Classifier")
+display(accuracy_score(y_test, pred))
+
+
+labels = np.unique(y_test)
+matrix =confusion_matrix(y_test, pred, labels=labels)
+
+print("confusion_matrix: SVM Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[160]:
+
+
+print("Accuracy: Random Forest Classifier")
+display(accuracy_score(y_test, pred_clf))
+
+
+labels = np.unique(y_test)
+matrix =confusion_matrix(y_test, pred_clf, labels=labels)
+
+print("confusion_matrix: Random Forest Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[ ]:
+
+
+
+
+
+# In[161]:
+
+
+# now we will preform multiple approaches to train the model on to see which approach gives better performance
+
+# 1. consider star rating 1 & 2 as neigative and 4 & 5 as positive  and 3 as neutral 
+# 2. consider star rating 1 & 2 as neigative and 3 &4 & 5 as positive 
+# 3. consider star rating 1 & 2 & 3 as neigative and 4 & 5 as positive
+# 4. consider star rating 1 & 2 as neigative and 4 & 5 as positive  and get rid of rating star 3
+
+
+# In[162]:
+
+
+keep_rating = set([1,2,3,4,5])
+
+keep_rating_train = [i for i, y in enumerate(y_train) if y in keep_rating]
+keep_rating_test = [i for i, y in enumerate(y_test) if y in keep_rating]
+
+
+
+
+# In[172]:
+
+
+print(" 1. consider star rating 1 & 2 as neigative and 4 & 5 as positive  and 3 as neutral ")
+print("")
+
+X_train_1 = X_train[keep_rating_train, :]
+y_train_1 = [y_train[i] for i in keep_rating_train]
+y_train_1 = ["n" if (y == 1 or y == 2) else ("p" if (y == 4 or y == 5) else "non") for y in y_train_1]
+
+X_test_1 = X_test[keep_rating_test, :]
+y_test_1 = [y_test[i] for i in keep_rating_test]
+y_test_1 = ["n" if (y == 1 or y == 2) else ("p" if (y == 4 or y == 5) else "non") for y in y_test_1]
+
+svm_classifier.fit(X_train_1, y_train_1)
+pred = svm_classifier.predict(X_test_1)
+
+print("Accuracy: SVM Classifier")
+display(accuracy_score(y_test_1, pred))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred, labels=labels)
+
+print("confusion_matrix: SVM Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+
+
+
+
+
+
+# In[164]:
+
+
+#clf = RandomForestClassifier()
+clf.fit(X_train_1, y_train_1)
+
+
+pred_clf = clf.predict(X_test_1)
+print("Accuracy: Random Forest Classifier")
+display(accuracy_score(y_test_1, pred_clf))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred_clf, labels=labels)
+
+print("confusion_matrix: Random Forest Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[ ]:
+
+
+
+
+
+# In[165]:
+
+
+print("  2. consider star rating 1 & 2 as neigative and 3 &4 & 5 as positive ")
+print("")
+
+
+#X_train_1 = X_train[keep_rating_train, :]
+y_train_1 = [y_train[i] for i in keep_rating_train]
+y_train_1 = ["n" if (y == 1 or y == 2) else "p" for y in y_train_1]
+
+X_test_1 = X_test[keep_rating_test, :]
+y_test_1 = [y_test[i] for i in keep_rating_test]
+y_test_1 = ["n" if (y == 1 or y == 2) else "p" for y in y_test_1]
+
+svm_classifier.fit(X_train_1, y_train_1)
+pred = svm_classifier.predict(X_test_1)
+
+print("Accuracy: SVM Classifier")
+display(accuracy_score(y_test_1, pred))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred, labels=labels)
+
+print("confusion_matrix: SVM Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[166]:
+
+
+clf.fit(X_train_1, y_train_1)
+
+
+pred_clf = clf.predict(X_test_1)
+print("Accuracy: Random Forest Classifier")
+display(accuracy_score(y_test_1, pred_clf))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred_clf, labels=labels)
+
+print("confusion_matrix: Random Forest Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[167]:
+
+
+print("  3. consider star rating 1 & 2 & 3 as neigative and 4 & 5 as positive")
+print("")
+
+
+
+#X_train_1 = X_train[keep_rating_train, :]
+y_train_1 = [y_train[i] for i in keep_rating_train]
+y_train_1 = ["n" if (y == 1 or y == 2 or y == 3) else "p" for y in y_train_1]
+
+X_test_1 = X_test[keep_rating_test, :]
+y_test_1 = [y_test[i] for i in keep_rating_test]
+y_test_1 = ["n" if (y == 1 or y == 2 or y == 3) else "p" for y in y_test_1]
+
+svm_classifier.fit(X_train_1, y_train_1)
+pred = svm_classifier.predict(X_test_1)
+
+print("Accuracy: SVM Classifier")
+display(accuracy_score(y_test_1, pred))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred, labels=labels)
+
+print("confusion_matrix: SVM Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[168]:
+
+
+clf.fit(X_train_1, y_train_1)
+
+
+pred_clf = clf.predict(X_test_1)
+print("Accuracy: Random Forest Classifier")
+display(accuracy_score(y_test_1, pred_clf))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred_clf, labels=labels)
+
+print("confusion_matrix: Random Forest Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[169]:
+
+
+print("  4. consider star rating 1 & 2 as neigative and 4 & 5 as positive  and get rid of rating star 3")
+print("")
+keep_rating = set([1,2,4,5])
+
+keep_rating_train = [i for i, y in enumerate(y_train) if y in keep_rating]
+keep_rating_test = [i for i, y in enumerate(y_test) if y in keep_rating]
+
+X_train_1 = X_train[keep_rating_train, :]
+y_train_1 = [y_train[i] for i in keep_rating_train]
+y_train_1 = ["n" if (y == 1 or y == 2) else "p" for y in y_train_1]
+
+X_test_1 = X_test[keep_rating_test, :]
+y_test_1 = [y_test[i] for i in keep_rating_test]
+y_test_1 = ["n" if (y == 1 or y == 2) else "p" for y in y_test_1]
+
+svm_classifier.fit(X_train_1, y_train_1)
+pred = svm_classifier.predict(X_test_1)
+
+print("Accuracy: SVM Classifier")
+display(accuracy_score(y_test_1, pred))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred, labels=labels)
+
+print("confusion_matrix: SVM Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
+
+# In[170]:
+
+
+clf.fit(X_train_1, y_train_1)
+
+
+pred_clf = clf.predict(X_test_1)
+print("Accuracy: Random Forest Classifier")
+display(accuracy_score(y_test_1, pred_clf))
+
+
+labels = np.unique(y_test_1)
+matrix =confusion_matrix(y_test_1, pred_clf, labels=labels)
+
+print("confusion_matrix: Random Forest Classifier")
+
+
+pd.DataFrame(matrix, index=labels, columns=labels)
+
