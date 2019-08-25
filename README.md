@@ -1,4 +1,4 @@
-# CapStone-Data-Science
+# Capstone-Data-Science
 
 # Table Of Contents:
 Installation
